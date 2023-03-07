@@ -1,0 +1,465 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+```{r setup, include=FALSE}
+#knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+```
+
+HW1 - Group 6
+
+Caroline Searcy - 47453436, Sahar Khan - 48942652, Rachana Pokhrel - 49051554, Napat Jivakanun - 49024058, Varun Gokhale - 49045717
+
+Objective: To predict bike ridership in year 3 onward 
+
+Executive summary 
+
+We have created two models, one for predicting casual ridership and one for predicting registered ridership with accuracies as shown in the graphs below. The three graphs depict a comparison of predicted values (from the generated multiple linear regression models) and actual values.  
+
+```{r , echo=FALSE}
+library(tidyverse)
+library(broom)
+library(car)
+library(dplyr)
+
+library(ggplot2)
+library(stats)
+data = read.csv("C:/Users/napat/OneDrive/Desktop/MSBA/Applied Predictive Analytics/HW1 bikeshare.csv")
+data<- data.frame(data)
+#str(data)
+#summary
+#summary(data)
+
+#factors of categorial variables
+#dim(data)
+
+data$season <- factor(data$season)
+data$mnth <- factor(data$mnth)
+data$holiday <- factor(data$holiday)
+data$weekday <- factor(data$weekday)
+data$workingday <- factor(data$workingday)
+data$weathersit <- factor(data$weathersit)
+
+# most prudent to change dteday to date format 
+data$dteday <- as.Date(data$dteday)
+
+
+#
+# notice 4.8738*instant in the formula below, this is the reincorporate the time effect that was removed
+
+data<- mutate(data, registered_predict = 4.8738*instant + 749.91+
+                ifelse(season== 1,0,0)+ 
+                ifelse(season == 2, 394.03,0)+ 
+                ifelse(season == 3, 272.14,0) + 
+                ifelse(season == 4, 744.60,0)+
+                ifelse(mnth == 1, 0,0) +
+                ifelse(mnth == 2, 48.20,0)+
+                ifelse(mnth == 3, 183.76,0)+
+                ifelse(mnth == 4, 194.67,0)+
+                ifelse(mnth == 5, 404.02,0)+
+                ifelse(mnth == 6, 352.43,0)+
+                ifelse(mnth == 7, (-56.88),0)+
+                ifelse(mnth == 8, 113.32,0)+
+                ifelse(mnth == 9, 317.10,0)+
+                ifelse(mnth == 10, (-152.53),0)+
+                ifelse(mnth == 11, (-798.73),0)+
+                ifelse(mnth == 12, (-744.01),0)+
+                ifelse(weekday == 1, 25.86,0)+
+                ifelse(weekday == 2, 199.41,0)+
+                ifelse(weekday == 3, 246.61,0)+
+                ifelse(weekday == 4, 254.79,0)+
+                ifelse(weekday == 5, 108.62,0)+
+                ifelse(weekday == 6, 254.76,0)+
+                ifelse(workingday == 1, 871.81,0)+
+                ifelse(weathersit == 1, 0 ,0)+
+                ifelse(weathersit == 2, (-345.01),0)+
+                ifelse(weathersit == 3, (-1297.74) ,0)+
+                (atemp*2295.83)+(hum*-905.91)+(windspeed*-1403.59))
+                
+
+
+data<- mutate(data, casual_predict = 962.913+
+                ifelse(season== 1,0,0)+ 
+                ifelse(season == 2, 224.414,0)+ 
+                ifelse(season == 3, 49.905 ,0) + 
+                ifelse(season == 4, 35.737 ,0)+
+                ifelse(mnth == 1, 0,0) +
+                ifelse(mnth == 2, (-35.294 ),0)+
+                ifelse(mnth == 3, 212.589,0)+
+                ifelse(mnth == 4, 177.205 ,0)+
+                ifelse(mnth == 5, 166.061,0)+
+                ifelse(mnth == 6, (-28.007),0)+
+                ifelse(mnth == 7, (-65.618),0)+
+                ifelse(mnth == 8, (30.407),0)+
+                ifelse(mnth == 9, 246.314 ,0)+
+                ifelse(mnth == 10, 326.270 ,0)+
+                ifelse(mnth == 11, 141.739,0)+
+                ifelse(mnth == 12,  1.116 ,0)+
+                ifelse(weekday == 1, (-741.870 ),0)+
+                ifelse(weekday == 2, (-802.551 ),0)+
+                ifelse(weekday == 3, (-805.414 ),0)+
+                ifelse(weekday == 4, (-803.492 ),0)+
+                ifelse(weekday == 5, (-628.944),0)+
+                ifelse(weekday == 6,144.432 ,0)+
+                ifelse(holiday == 1, 505.734 ,0)+
+                ifelse(weathersit == 1, 0 ,0)+
+                ifelse(weathersit == 2, (-72.077 ),0)+
+                ifelse(weathersit == 3, (-314.610 ) ,0)+
+                (atemp*1990.382 )+(hum*-757.427 )+(windspeed*-1197.901))
+
+data <- mutate(data, registered_predict = ifelse(registered_predict < 0,0,registered_predict))
+
+data <- mutate(data, casual_predict = ifelse(casual_predict < 0,0,casual_predict))
+
+data <- mutate(data, cnt_predict = casual_predict + registered_predict)
+
+
+# graphing
+
+library(gridExtra)
+library(patchwork)
+
+#registered original vs predict
+reg_predict <- ggplot(data = data, aes(dteday)) +  
+  geom_line(aes(y = registered), color = "green") +
+  geom_line(aes(y = registered_predict), color = "black")+xlab("date")
+#reg_predict
+
+
+#casual original vs predict
+cas_predict <- ggplot(data = data, aes(dteday)) +  
+  geom_line(aes(y = casual), color = "green") +
+  geom_line(aes(y = casual_predict), color = "black")+ xlab("date")
+
+#cas_predict
+
+
+#cnt original vs predicted
+
+df_cnt_predict <- data.frame(date = data$dteday,
+                 cnt_predict = data$cnt_predict,
+                 cnt = data$cnt)
+
+df_cnt_predict <- df_cnt_predict %>% pivot_longer(cols=c('cnt_predict', 'cnt'),
+                          names_to='o_vs_p',
+                          values_to='ridership')
+
+cnt_predict <- ggplot(df_cnt_predict, aes(x=date, y=ridership)) + 
+  geom_line(aes(color= o_vs_p)) +
+  scale_color_manual(name='o_vs_p', labels=c('original', 'predict'),
+                     values=c('green', 'black')) + ggtitle("                  Total Ridership - original vs predicted") + ylab("t_ridership")
+#cnt_predict
+
+cnt_predict/(reg_predict | cas_predict)
+
+
+
+
+
+
+
+
+```
+
+Insights taken to construct the prediction models:
+
+1. It was discovered that registered and casual riders behave differently. fig 3 depicts that registered riders has a higher gradient of increase over the past two years in comparison to that of casual riders. The regression gradient for registered and casual riders versus instant (instant 1 = day 1, instant 90 = day 90) are 4.87 and 0.895 respectively. fig 4 and 5 shows that casual riders has a higher propensity to ride on weekends or holidays over weekdays, and vice-versa. This indicates that different models should be used to predict registered and casual riders. 
+
+2. The increasing trend for registered riders are not explained by any of the weather related data. The coefficients of regression for temp, atemp, windspeed, and hum (humidity) versus instant are 1.305e-04, 1.178e-0.4, -0.4133e-05, and 1.104e-0.5 respectively, which are extremely small gradients compared to the 4.87 gradient of registered ridership with respect to instant. The effect of a 4.87 gradient with respect to instant was removed from the registered ridership data for regression modelling (but is reincorporated when the model was used to make prediction). Casual ridership was not adjusted because its increasing trend is negligible. fig 6 shows the adjusted values of registered ridership for registered ridership regression modelling. 
+
+```{r , echo=FALSE}
+
+#Examine the increasing trend in weather data, if there one or more of the temp data increases parallel to the registered increase rate, then it means that weather factor does account for the increasing trend in registered users. Turns out that all gradient for weather data with respect to time has a very low gradient. This means that weather does not account for the 4.87 gradient for registered users. 
+
+atemp_reg<- lm(atemp ~ instant , data = data)
+#summary(atemp_reg)
+
+temp_reg<- lm(temp ~ instant , data = data)
+#summary(temp_reg)
+
+windspeed_reg <- lm(windspeed ~ instant , data = data)
+#summary(windspeed_reg)
+
+hum_reg <- lm(hum ~ instant , data = data)
+#summary(hum_reg)
+
+```
+
+```{r , fig.width = 6.3 , fig.height= 3.3, echo=FALSE}
+
+#graph of original ridership trend
+
+df_original_trend_ridership <- data.frame(date = data$dteday,
+                 registered = data$registered,
+                 casual = data$casual)
+
+df_original_trend_ridership <- df_original_trend_ridership %>% pivot_longer(cols=c('registered', 'casual'),
+                        names_to='rider_category',
+                          values_to='ridership')
+
+original_trend_ridership <- ggplot(df_original_trend_ridership, aes(x=date, y=ridership)) + 
+  geom_line(aes(color=rider_category)) +
+  scale_color_manual(name='rider category', labels=c('registered', 'casual'),
+                     values=c('green', 'black')) + ggtitle("                      (fig 3) Ridership Trend") 
+
+#+ theme(axis.text.x =element_text(size=5),axis.text.y =element_text(size=5), #axis.title.x =element_text(size=8),axis.title.y =element_text(size=8), plot.title #=element_text(size=14), legend.text =element_text(size=8), legend.title #=element_text(size=8) )
+
+
+```
+
+
+```{r , echo=FALSE}
+library(gridExtra)
+library(patchwork)
+
+library(gridExtra)
+#graph of interaction effect of casual and registered ridership depending on whether it is a working day or not 
+
+par(mar = c(5,5,2,2))
+
+cas_int <- ggplot(data, aes(x = dteday, y = casual)) +
+  geom_point() +
+  facet_wrap(. ~ workingday) + xlab("date")+ ylab("casual ridership")+ ggtitle("(fig 4) 0 = not working day 1 = working day") +  theme( plot.title=element_text(size=6.5), axis.text.x=element_text(size=4) )
+
+reg_int <- ggplot(data, aes(x = dteday, y = registered)) +
+  geom_point() + 
+  facet_wrap(. ~ workingday)+ xlab("date") + ylab("registered ridership")+ ggtitle("(fig 5) 0 = not_working_day 1 = working_day") +  theme( plot.title=element_text(size=6.5), axis.text.x=element_text(size=4))
+
+#grid.arrange(cas_int, reg_int, ncol = 2)
+
+```
+
+```{r , echo=FALSE}
+#Examine the increasing trend in both registered and casual users
+
+mul_registered <- lm (registered ~ instant, data = data)
+#summary(mul_registered)
+
+mul_casual <- lm (casual ~ instant, data = data)
+#summary(mul_casual)
+
+```
+
+```{r , echo=FALSE}
+#remove the unexplained effect of time out of both registered and casual 
+data<- mutate(data, registered_without_time_effect = registered - 4.8738*instant)
+data<- mutate(data, casual_without_time_effect = casual - 0.8950*instant)
+
+data <- mutate(data, registered_without_time_effect = ifelse(registered_without_time_effect<0,0,registered_without_time_effect))
+
+
+data <- mutate(data, casual_without_time_effect = ifelse(casual_without_time_effect<0,0,casual_without_time_effect))
+
+```
+
+
+```{r , echo=FALSE}
+
+#compare r squared of backward elimination regression (excluding year) of #original #ridership vs adjusted ridership (by taking out the effect of time)
+
+#registered time effect removed vs original registered 
+#r squared for registered with time effect removed is extremely higher 0.7344 > 0.541
+#we choose to use registered with time effect remove for the regression formula to predict registered ridership. The gradient with respect to instant that was removed will be added on top of the regression formula for prediction too.  
+
+#fitregistered_no_time_effect <- step(lm(registered_without_time_effect ~ season + #mnth + weekday + workingday + holiday + weathersit + temp+  atemp +hum + windspeed, #data = data), direction = "backward")
+
+#summary(fitregistered_no_time_effect)
+
+
+
+#fitregistered <- step(lm(registered ~ season + mnth + weekday + workingday + holiday #+ weathersit + temp+  atemp +hum + windspeed, data = data), direction = "backward")
+#summary(fitregistered)
+
+
+```
+
+
+```{r , echo=FALSE}
+
+#compare r squared of backward elimination regression (excluding year) of #original #ridership vs adjusted ridership (by taking out the effect of time)
+
+#casual time effect removed vs original casual 
+#r squared for casual with time effect removed is slightly lower 0.67 < 0.69
+#we choose to use the original casual data for the regression formula to predict casual ridership. 
+
+
+#fitcasual_no_time_effect <- step(lm(casual_without_time_effect ~ season + mnth + #weekday + temp+ holiday+ workingday + weathersit + atemp +hum + windspeed, data = #data), direction = "backward")
+#summary(fitcasual_no_time_effect)
+
+#fitcasual <- step(lm(casual~ season + mnth + weekday + temp+ holiday+ workingday + #weathersit + atemp +hum + windspeed, data = data), direction = "backward")
+#summary(fitcasual)
+
+```
+
+
+
+```{r , fig.height = 9, echo=FALSE}
+
+# graph of adjusted ridership 
+df_adjusted <- data.frame(date = data$dteday,
+                 registered_adjusted = data$registered_without_time_effect,
+                 casual = data$casual)
+
+df_adjusted <- df_adjusted %>% pivot_longer(cols=c('registered_adjusted', 'casual'),
+                          names_to='rider_category',
+                          values_to='ridership')
+
+adjusted_graph <- ggplot(df_adjusted, aes(x=date, y=ridership)) + 
+  geom_line(aes(color=rider_category)) +
+  scale_color_manual(name='rider category', labels=c('casual', 'registered_adj'),
+                     values=c('green', 'black')) + ggtitle("                (fig 6) Adjusted Ridership Trend") 
+                                                                                                                            
+#graph together
+original_trend_ridership / (cas_int|reg_int)/adjusted_graph
+
+```
+
+Key characteristics and assumptions of the formulated regression formula to predict casual and registered ridership: 
+
+1. The instant variable, which is the number of days past January 11, 2011 is required in our registered ridership prediction model to reincorporate the 4.87 gradient effect that was taken out for the purpose of model creation. If there is a projection that factors such as economic growth or increased brand awareness will cause high/low growth to registered ridership, the reincorporated 4.87 gradient cant be changed to another number. 
+
+2. Both model assumes that registered riders are growing and casual riders are constant.
+
+
+Regression formula (in R) formulated to predict registered ridership and casual ridership by creating a column next to a set of data: 
+
+registered ridership:
+
+data<- mutate(data, registered_predict = 4.8738*instant + 749.91+ ifelse(season== 1,0,0)+ ifelse(season == 2, 394.03,0)+ ifelse(season == 3, 272.14,0) + ifelse(season == 4, 744.60,0)+ifelse(mnth == 1, 0,0) + ifelse(mnth == 2, 48.20,0)+ifelse(mnth == 3, 183.76,0)+ifelse(mnth == 4, 194.67,0)+ ifelse(mnth == 5, 404.02,0)+ifelse(mnth == 6, 352.43,0)+ ifelse(mnth == 7, (-56.88),0)+ ifelse(mnth == 8, 113.32,0)+ ifelse(mnth == 9, 317.10,0)+ ifelse(mnth == 10, (-152.53),0)+ ifelse(mnth == 11, (-798.73),0)+ ifelse(mnth == 12, (-744.01),0)+ ifelse(weekday == 1, 25.86,0)+ ifelse(weekday == 2, 199.41,0)+ ifelse(weekday == 3, 246.61,0)+ ifelse(weekday == 4, 254.79,0)+ ifelse(weekday == 5, 108.62,0)+ ifelse(weekday == 6, 254.76,0)+ifelse(workingday == 1, 871.81,0)+ ifelse(weathersit == 1, 0 ,0)+ifelse(weathersit == 2, (-345.01),0)+ ifelse(weathersit == 3, (-1297.74) ,0)+ (atemp*2295.83)+(hum*-905.91)+(windspeed*-1403.59))
+                
+
+casual ridership:
+
+data<- mutate(data, casual_predict = 962.913+ ifelse(season== 1,0,0)+ ifelse(season == 2, 224.414,0)+ ifelse(season == 3, 49.905 ,0) + ifelse(season == 4, 35.737 ,0)+ifelse(mnth == 1, 0,0) +ifelse(mnth == 2, (-35.294 ),0)+ifelse(mnth == 3, 212.589,0)+ifelse(mnth == 4, 177.205 ,0)+ifelse(mnth == 5, 166.061,0)+ifelse(mnth == 6, (-28.007),0)+ifelse(mnth == 7, (-65.618),0)+ifelse(mnth == 8, (30.407),0)+ ifelse(mnth == 9, 246.314 ,0)+ifelse(mnth == 10, 326.270 ,0)+ifelse(mnth == 11, 141.739,0)+ifelse(mnth == 12,  1.116 ,0)+ ifelse(weekday == 1, (-741.870 ),0)+ ifelse(weekday == 2, (-802.551 ),0)+ ifelse(weekday == 3, (-805.414 ),0)+ ifelse(weekday == 4, (-803.492 ),0)+ ifelse(weekday == 5, (-628.944),0)+ ifelse(weekday == 6,144.432 ,0)+ ifelse(holiday == 1, 505.734 ,0)+ ifelse(weathersit == 1, 0 ,0)+ ifelse(weathersit == 2, (-72.077 ),0)+ ifelse(weathersit == 3, (-314.610 ) ,0)+(atemp*1990.382 )+(hum*-757.427 )+(windspeed*-1197.901))
+
+
+
+
+Recommendations derived from both prediction models:
+
+1. Assuming January has 0 customers, November and December results in a loss of 799 and 744 registered customers respectively. To mitigate for loss during these winter months, an incentive should be sent out to registered customers to get them riding.
+	
+2. For casual riders, weekdays are often a loss. Assuming Sundays result in 0 casual riders, weekdays lose an average of around 756/day casual riders. To boost the customer base of casual riders on weekdays, the company should (1) partner with large employers in major cities to have bikes outside the offices and (2) position bikes next to major public transit hub.
+	
+3. With an increase of casual riders during weekdays, the company should push to convert casual riders into regular, registered users. Assuming 10% conversion rate, over the course of a year, the company could gain about 19,000 registered customers.  
+
+```{r , echo=FALSE}
+#run the model through the original data set 
+# notice 4.8738*instant in the formula below, this is the reincorporate the time effect that was removed
+
+data<- mutate(data, registered_predict = 4.8738*instant + 749.91+
+                ifelse(season== 1,0,0)+ 
+                ifelse(season == 2, 394.03,0)+ 
+                ifelse(season == 3, 272.14,0) + 
+                ifelse(season == 4, 744.60,0)+
+                ifelse(mnth == 1, 0,0) +
+                ifelse(mnth == 2, 48.20,0)+
+                ifelse(mnth == 3, 183.76,0)+
+                ifelse(mnth == 4, 194.67,0)+
+                ifelse(mnth == 5, 404.02,0)+
+                ifelse(mnth == 6, 352.43,0)+
+                ifelse(mnth == 7, (-56.88),0)+
+                ifelse(mnth == 8, 113.32,0)+
+                ifelse(mnth == 9, 317.10,0)+
+                ifelse(mnth == 10, (-152.53),0)+
+                ifelse(mnth == 11, (-798.73),0)+
+                ifelse(mnth == 12, (-744.01),0)+
+                ifelse(weekday == 1, 25.86,0)+
+                ifelse(weekday == 2, 199.41,0)+
+                ifelse(weekday == 3, 246.61,0)+
+                ifelse(weekday == 4, 254.79,0)+
+                ifelse(weekday == 5, 108.62,0)+
+                ifelse(weekday == 6, 254.76,0)+
+                ifelse(workingday == 1, 871.81,0)+
+                ifelse(weathersit == 1, 0 ,0)+
+                ifelse(weathersit == 2, (-345.01),0)+
+                ifelse(weathersit == 3, (-1297.74) ,0)+
+                (atemp*2295.83)+(hum*-905.91)+(windspeed*-1403.59))
+                
+
+
+data<- mutate(data, casual_predict = 962.913+
+                ifelse(season== 1,0,0)+ 
+                ifelse(season == 2, 224.414,0)+ 
+                ifelse(season == 3, 49.905 ,0) + 
+                ifelse(season == 4, 35.737 ,0)+
+                ifelse(mnth == 1, 0,0) +
+                ifelse(mnth == 2, (-35.294 ),0)+
+                ifelse(mnth == 3, 212.589,0)+
+                ifelse(mnth == 4, 177.205 ,0)+
+                ifelse(mnth == 5, 166.061,0)+
+                ifelse(mnth == 6, (-28.007),0)+
+                ifelse(mnth == 7, (-65.618),0)+
+                ifelse(mnth == 8, (30.407),0)+
+                ifelse(mnth == 9, 246.314 ,0)+
+                ifelse(mnth == 10, 326.270 ,0)+
+                ifelse(mnth == 11, 141.739,0)+
+                ifelse(mnth == 12,  1.116 ,0)+
+                ifelse(weekday == 1, (-741.870 ),0)+
+                ifelse(weekday == 2, (-802.551 ),0)+
+                ifelse(weekday == 3, (-805.414 ),0)+
+                ifelse(weekday == 4, (-803.492 ),0)+
+                ifelse(weekday == 5, (-628.944),0)+
+                ifelse(weekday == 6,144.432 ,0)+
+                ifelse(holiday == 1, 505.734 ,0)+
+                ifelse(weathersit == 1, 0 ,0)+
+                ifelse(weathersit == 2, (-72.077 ),0)+
+                ifelse(weathersit == 3, (-314.610 ) ,0)+
+                (atemp*1990.382 )+(hum*-757.427 )+(windspeed*-1197.901))
+
+data <- mutate(data, registered_predict = ifelse(registered_predict < 0,0,registered_predict))
+
+data <- mutate(data, casual_predict = ifelse(casual_predict < 0,0,casual_predict))
+
+data <- mutate(data, cnt_predict = casual_predict + registered_predict)
+
+```
+
+
+```{r , echo=FALSE}
+
+library(gridExtra)
+library(patchwork)
+
+#registered original vs predict
+reg_predict <- ggplot(data = data, aes(dteday)) +  
+  geom_line(aes(y = registered), color = "green") +
+  geom_line(aes(y = registered_predict), color = "black")+xlab("date")
+#reg_predict
+
+
+#casual original vs predict
+cas_predict <- ggplot(data = data, aes(dteday)) +  
+  geom_line(aes(y = casual), color = "green") +
+  geom_line(aes(y = casual_predict), color = "black")+ xlab("date")
+
+#cas_predict
+
+
+#cnt original vs predicted
+
+df_cnt_predict <- data.frame(date = data$dteday,
+                 cnt_predict = data$cnt_predict,
+                 cnt = data$cnt)
+
+df_cnt_predict <- df_cnt_predict %>% pivot_longer(cols=c('cnt_predict', 'cnt'),
+                          names_to='o_vs_p',
+                          values_to='ridership')
+
+cnt_predict <- ggplot(df_cnt_predict, aes(x=date, y=ridership)) + 
+  geom_line(aes(color= o_vs_p)) +
+  scale_color_manual(name='o_vs_p', labels=c('original', 'predict'),
+                     values=c('green', 'black')) + ggtitle("                  Total Ridership - original vs predicted") + ylab("t_ridership")
+#cnt_predict
+
+#cnt_predict/(reg_predict | cas_predict)
+
+
+```
+
+
+
