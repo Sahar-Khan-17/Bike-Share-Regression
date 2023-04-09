@@ -1,6 +1,8 @@
 # Bike-Share-Regression
 predict the number of daily bike users.
+
 # Background
+
 Bike sharing systems are new generation of traditional bike rentals where whole process from membership,
 rental and return back has become automatic. Through these systems, user is able to easily rent a bike from
 a particular position and return back at another position. Currently, there are about over 500 bike-sharing
@@ -14,7 +16,15 @@ mobility in the city. Hence, it is expected that most of important events in the
 monitoring these data.
 
 #3 Objectives and Deliverables
-  complete a regression analysis on the data, the goal is to predict the number of daily bike users.  Decide whether casual, registered or total
+1.   complete a regression analysis on the data, the goal is to predict the number of daily bike users.  Decide whether casual, registered or total
 is most valuable as a dependent variable.
-  Determine an interesting insight that would catch my attention.
- Tell a story with the data.
+2.  Determine an interesting insight that would catch my attention.
+3. Tell a story with the data.
+
+# Selected Outputs: 
+
+![Screenshot 2023-03-07 152322](https://user-images.githubusercontent.com/116682872/230787459-e7f7f867-85bf-40f6-a8c1-ffcdc8bea617.png)
+
+![Screenshot 2023-03-07 153853](https://user-images.githubusercontent.com/116682872/230787444-f2f17dfd-33a8-42e1-96d7-8046accc985d.png)
+
+
